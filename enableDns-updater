@@ -1,0 +1,380 @@
+#!/usr/bin/env python
+
+import syslog
+
+def logger(msg):
+    if results.daemonize:
+        # we are running as a daemon. Log to syslog
+        syslog.openlog('EnableDNS', syslog.LOG_USER)
+        syslog.syslog(str(msg))
+        syslog.closelog()
+    else:
+        print msg
+
+    return 0
+
+
+try:
+    import requests
+except:
+    logger("This application requires python-requests in order to run. You may install this library on most systems by using easy_install:\n")
+    logger("easy_install requests")
+    sys.exit(1)
+
+try:
+    from configobj import ConfigObj
+except:
+    logger("This application requires python-configobj in order to run. You may install this library on most systems by using easy_install:\n")
+    logger("easy_install configobj")
+    sys.exit(1)
+
+try:
+    import argparse
+except:
+    logger("This application requires argparse in order to run. You may install this library on most systems by using easy_install:\n")
+    logger("easy_install argparse")
+    sys.exit(1)
+
+
+import json
+import os
+import sys
+import pwd
+import getpass
+import signal
+import time
+import resource
+
+def logger(msg):
+    if results.daemonize:
+        # we are running as a daemon. Log to syslog
+        syslog.syslog(syslog.LOG_NOTICE, str(msg))
+    else:
+        print msg
+
+    return 0
+
+def createDaemon():
+    UMASK = 0
+    WORKDIR = "/"
+    MAXFD = 1024
+
+    if (hasattr(os, "devnull")):
+        REDIRECT_TO = os.devnull
+    else:
+        REDIRECT_TO = "/dev/null"
+
+    try:
+        pid = os.fork()
+    except OSError, e:
+        raise Exception, "%s [%d]" % (e.strerror, e.errno)
+
+    if (pid == 0):  # The first child.
+        os.setsid()
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
+        try:
+            pid = os.fork()
+        except OSError, e:
+            raise Exception, "%s [%d]" % (e.strerror, e.errno)
+
+        if (pid == 0):
+            os.chdir(WORKDIR)
+            os.umask(UMASK)
+        else:
+            os._exit(0)
+    else:
+        os._exit(0)
+
+    maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+    if (maxfd == resource.RLIM_INFINITY):
+        maxfd = MAXFD
+
+   # Iterate through and close all file descriptors.
+    for fd in range(0, maxfd):
+        try:
+            os.close(fd)
+        except OSError: # ERROR, fd wasn't open to begin with (ignored)
+            pass
+
+    os.open(REDIRECT_TO, os.O_RDWR) # standard input (0)
+
+    # Duplicate standard input to standard output and standard error.
+    os.dup2(0, 1)           # standard output (1)
+    os.dup2(0, 2)           # standard error (2)
+
+    return(0)
+
+
+
+def sigint_handler(signum, frame):
+    logger('Exiting...')
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, sigint_handler)
+
+
+parser = argparse.ArgumentParser(version='1.0', add_help=True)
+parser.add_argument('--reset-login', '-rl', action="store_true", default=False, help="Use this option to reset your login information")
+parser.add_argument('--reset-domain', '-rd', action="store_true", default=False, help='Use this option to reset domain name and subdomain preferences')
+parser.add_argument('--force-update', '-f', action="store_true", default=False, help='Force update. Use this option ONLY if you suspect that a previous update failed and was cached localy as successful.')
+parser.add_argument('--daemonize', '-d', action="store_true", default=False, help="Run the updater as a daemon process")
+
+
+class ConfigEdit():
+
+    def __init__(self):
+        self.usr_data = UserData()
+        self.config = self.usr_data.config
+
+    def edit_domain_info(self):
+        if self.config.get('domain', False) is False:
+            self.config['domain'] = {}
+        
+        self.config['domain']['name'] = raw_input('Domain name (eg: example.com): ')
+        self.config['domain']['subdomain'] = raw_input('Subdomain (eg: www): ')
+        if len(self.config['domain']['name']) == 0:
+            logger("You must specify a domain name!")
+            sys.exit(1)
+        self.config.write()
+        return True
+
+    def edit_user_info(self):
+        self.config['user']['username'] = raw_input('EnableDNS username: ')
+        self.config['user']['password'] = getpass.getpass('EnableDNS password: ')
+        if len(self.config['user']['username']) == 0 or len(self.config['user']['password']) == 0:
+            logger("Username and password are mandatory!")
+            sys.exit(1)
+        self.config.write()
+        return True
+
+    def delete_cache(self):
+        if self.config.get('cache', False) != False:
+            del self.config['cache']
+        self.config.write()
+        return True
+
+class UserData():
+
+    def __init__(self):
+        try:
+            self.uid = os.getuid()
+            self.usr = pwd.getpwuid(self.uid)
+            self.home = self.usr.pw_dir
+        except Exception as err:
+            logger("Failed to get user information (%s)" % str(err))
+            sys.exit(1)
+
+        if os.path.isdir(self.home + '/.config'):
+            base = self.home + '/.config/'
+        else:
+            base = self.homei + '/.'
+
+        self.url = 'https://enabledns.com/api/domains'
+        self.cfg_dir = base + 'enabledns'
+        self.cfg_file = self.cfg_dir + '/config.ini'
+
+        self.config = self.get_config()
+
+    def get_config(self):
+        if os.path.isfile(self.cfg_file) is False:
+            self.first_run()
+
+        try:
+            tmp = ConfigObj(self.cfg_file)
+        except Exception as err:
+            logger("There was an error opening the config file (%s)" % str(err))
+            sys.exit(1)
+
+        return tmp
+
+    def first_run(self):
+        logger("It seams you are running this application for the verry first time. Please take a moment to fill out your login information to EnableDNS and to tell us which subdomain you wish to update.\nYou will be asked to fill in you username, password, a domain name you already configured on enabledns.com, and a subdomain.\n\nPlease note that if you do not specify a subdomain, this application wil update the domain name itself.\n\n")
+        if os.path.isdir(self.cfg_dir) is False:
+            try:
+                os.makedirs(self.cfg_dir, 00750)
+            except Exception as err:
+                logger("Failed to create config directory %s. Error was: %s" % (str(self.cfg_dir), str(err)))
+                sys.exit(1)
+
+        cfg = ConfigObj()
+        cfg.filename = self.cfg_file
+
+        cfg['user'] = {}
+        cfg['domain'] = {}
+
+
+        cfg['user']['username'] = raw_input('EnableDNS username: ')
+        cfg['user']['password'] = getpass.getpass('EnableDNS password: ')
+        cfg['domain']['name'] = raw_input('Domain name (eg: example.com): ')
+        cfg['domain']['subdomain'] = raw_input('Subdomain (eg: www): ')
+
+        if len(cfg['user']['username']) == 0 or len(cfg['user']['password']) == 0 or len(cfg['domain']['name']) == 0:
+            logger("Username, pasword and domain name are mandatory. Please rerun this script and input the required informtion.")
+            sys.exit(1)
+
+        if len(cfg['domain']['subdomain']) == 0:
+            cfg['domain']['subdomain'] = None
+
+        self.config = cfg
+
+        cfg.write()
+        logger("Your account has been set up. If you wish to make changes to the info you just subimted, please consult the help menu.")
+        return cfg
+
+    def get_my_ip(self):
+        ip = None
+        ip = requests.get('https://enabledns.com/ip')
+        if str(ip.status_code) != '200':
+            logger("Failed to fetch your current IP address. Please check your internet connection.")
+
+        return ip.content
+
+    def treat_http_codes(self, code):
+        if str(code) == '404':
+            logger("Could not find any information about %s . Is this domain configured in your EnableDNS account?" % str(self.config['domain']['name']))
+            sys.exit(1)
+
+        if str(code) == '401':
+            logger("Incorect username or password")
+            sys.exit(1)
+
+        if str(code) == '500':
+            logger("There was a server error. Please try again later")
+            sys.exit(1)
+
+        if str(code) != '200':
+            logger("There was an error retrieving the domain name information for %s --> %s" % (str(self.config['domain']['name']), str(code)))
+
+        return True
+       
+    def create_entry(self, ent, ip):
+        rec_data = {'host': str(ent), 'ttl': 600, 'type': 'A', 'data': str(ip)} 
+        x = self.url + '/' + self.config['domain']['name'] + '.json'
+        hdr = {'Content-type': 'application/json'}
+        data = requests.post(x, auth=(self.config['user']['username'], self.config['user']['password']), headers=hdr, data=json.dumps(rec_data))
+        self.treat_http_codes(data.status_code)
+        return True
+
+
+    def get_record_info(self, ip=None):
+
+        if self.config.get('cache', False) != False:
+            if self.config['cache'].get('rec_id', False) != False:
+                return {'id': self.config['cache']['rec_id']}
+
+
+        x = self.url + '/' + self.config['domain']['name'] + '.json'
+        data = requests.get(x, auth=(self.config['user']['username'], self.config['user']['password']))
+        self.treat_http_codes(data.status_code)
+
+        try:
+            rec = json.loads(data.content)
+        except:
+            logger("Got invalid data from server. Please try again later.")
+            sys.exit(1)
+
+        if self.config['domain']['subdomain'] is None:
+            rec_name = u'@'
+        else:
+            rec_name = self.config['domain']['subdomain']
+
+        tmp = None
+
+        for i in rec:
+            if str(i['type']) == 'A' and str(i['host']) == str(rec_name):
+                tmp = i
+       
+        if tmp is None:
+            self.create_entry(rec_name, ip)
+            sys.exit(1)
+        else:
+            self.config['cache']['rec_id'] = tmp['id']
+            self.config.write()
+        
+
+        return {'id': tmp['id']}
+
+    def update_ip(self, ip):
+        rec_info = self.get_record_info(ip=ip)
+        rec_info['data'] = str(ip)
+        x = self.url + '/' + self.config['domain']['name'] + '.json'
+        hdr = {'Content-type': 'application/json'}
+        tmp = requests.put(x, auth=(self.config['user']['username'], self.config['user']['password']), data=json.dumps(rec_info), headers=hdr)
+        self.treat_http_codes(tmp.status_code)
+        return True
+
+    def run(self):
+        if 'cache' not in self.config:
+            self.config['cache'] = {}
+        ip = None
+        ip = self.get_my_ip()
+        if self.config['cache'].get('ip', False) is False:
+            self.config['cache']['ip'] = ip
+            self.update_ip(ip)
+            self.config.write()
+
+        if str(ip) != str(self.config['cache']['ip']):
+                logger("IP address has changed. Updating...")
+                self.update_ip(ip)
+                self.config['cache']['ip'] = ip
+                self.config.write()
+                logger("Successfuly updated IP. New ip is %s" % str(ip))
+                sys.exit(0)
+        return True
+
+
+
+def reap_kids(pid):
+    if pid is False:
+        return None
+    elif pid != None:
+        p, e = os.waitpid(pid, os.WNOHANG)
+        if p != 0:
+            return None
+        return pid
+
+
+
+def run(loop=False):
+    if loop is True:
+        createDaemon()
+        proc_pid = None
+        while 1:
+            if proc_pid is None:
+                p = os.fork()
+                if p == 0:
+                    logger("forking...")
+                    a = UserData()
+                    a.run()
+                    sys.exit(0)
+                elif p > 0:
+                    proc_pid = p
+                else:
+                    logger("Failed to fork")
+                    sys.exit(1)
+            time.sleep(20)
+            proc_pid = reap_kids(proc_pid)
+            time.sleep(280)
+    else:
+        a = UserData()
+        a.run()
+
+    return True
+
+
+if __name__ == "__main__":
+    results = parser.parse_args()
+
+    actions = ConfigEdit()
+
+    if results.reset_domain is True:
+        actions.edit_domain_info()
+
+    if results.reset_login is True:
+        actions.edit_user_info()
+
+    if results.force_update is True:
+        actions.delete_cache()
+
+    run(loop=results.daemonize)
