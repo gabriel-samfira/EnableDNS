@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'main.ui'
 #
-# Created: Sun Dec 11 03:03:02 2011
+# Created: Mon Dec 12 14:36:43 2011
 #      by: PyQt4 UI code generator 4.8.5
 #
 # WARNING! All changes made in this file will be lost!
@@ -27,7 +27,7 @@ class Ui_MainWindow(object):
         MainWindow.setMaximumSize(QtCore.QSize(600, 250))
         MainWindow.setWindowTitle(QtGui.QApplication.translate("MainWindow", "EnableDNS updater", None, QtGui.QApplication.UnicodeUTF8))
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/updater/icon.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/updater/icon128px.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setStyleSheet(_fromUtf8("#centralwidget {\n"
 "background: url(\":/updater/background-small.png\");\n"
@@ -137,4 +137,4 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         pass
 
-import resources_rc
+import resource_rc

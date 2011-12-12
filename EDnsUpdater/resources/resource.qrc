@@ -1,7 +1,10 @@
 <RCC>
   <qresource prefix="updater">
+    <file>icon32px.png</file>
     <file>background-small.png</file>
     <file>eDNS-logo200.png</file>
     <file>icon.png</file>
+    <file>icon64px.png</file>
+    <file>icon128px.png</file>
   </qresource>
 </RCC>

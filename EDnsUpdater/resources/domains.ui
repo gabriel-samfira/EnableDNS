@@ -16,6 +16,10 @@
   <property name="windowTitle">
    <string>Domain List</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="resource.qrc">
+    <normaloff>:/updater/icon128px.png</normaloff>:/updater/icon128px.png</iconset>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <layout class="QGridLayout" name="gridLayout">
@@ -62,6 +66,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="resource.qrc"/>
+ </resources>
  <connections/>
 </ui>

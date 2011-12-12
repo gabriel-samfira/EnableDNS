@@ -10,57 +10,53 @@
     <x>0</x>
     <y>0</y>
     <width>423</width>
-    <height>297</height>
+    <height>286</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="resource.qrc">
+    <normaloff>:/updater/icon128px.png</normaloff>:/updater/icon128px.png</iconset>
+  </property>
   <property name="styleSheet">
-   <string notr="true">#label {
+   <string notr="true">#About {
+background: url(&quot;:/updater/background-small.png&quot;);
+}
+
+#label_3 {
 font-weight: bold;
 font-size:22px;
+color: white;
 }</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>EnableDNS Updater</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QLabel" name="label_3">
        <property name="text">
-        <string>Vesion: 0.01</string>
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-weight:600; font-style:normal;&quot;&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;EnableDNS Updater&lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt;&quot;&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:9pt; font-weight:400;&quot;&gt;Vesion: 0.01&lt;/span&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt; font-weight:400;&quot;&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:9pt; font-weight:400;&quot;&gt;This is the &lt;/span&gt;&lt;a href=&quot;https://enabledns.com/&quot;&gt;&lt;span style=&quot; font-size:9pt; font-weight:400; text-decoration: underline; color:#8ab20a;&quot;&gt;EnableDNS&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:9pt; font-weight:400;&quot;&gt; dynamic update client. This program is Open Source Software and can be downloaded from:&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:9pt; font-weight:400;&quot;&gt;&lt;/p&gt;
+&lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;https://github.com/gabriel-samfira/EnableDNS&quot;&gt;&lt;span style=&quot; font-size:9pt; font-weight:400; text-decoration: underline; color:#8ab20a;&quot;&gt;https://github.com/gabriel-samfira/EnableDNS&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>This is the EnableDNS dynamic update client
-This program is Open Source Software
-and can be downloaded from:</string>
+       <property name="wordWrap">
+        <bool>true</bool>
        </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
+       <property name="openExternalLinks">
+        <bool>true</bool>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>https://github.com/gabriel-samfira/EnableDNS</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
+       <property name="textInteractionFlags">
+        <set>Qt::TextBrowserInteraction</set>
        </property>
       </widget>
      </item>
@@ -78,7 +74,9 @@ and can be downloaded from:</string>
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="resource.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>

@@ -13,14 +13,14 @@ import time
 class Domains():
 
     def __init__(self):
-        self.url = 'https://enabledns.com/api/domains'
-        self.export_url = 'https://enabledns.com/api/export.json'
+        self.url = 'http://alfa.enabledns.com/api/domains'
+        self.export_url = 'http://alfa.enabledns.com/api/export.json'
         self.config = Settings().get_config()
 
 
     @classmethod
     def do_login(cls, username, password):
-        x = 'https://enabledns.com/api/domains.json'
+        x = 'http://alfa.enabledns.com/api/domains.json'
         data = requests.get(x, auth=(username, password))
         if str(data.status_code) != '200':
             return data.status_code
@@ -28,8 +28,10 @@ class Domains():
         
         
     def get_my_ip(self):
-        ip = None
-        ip = requests.get('https://enabledns.com/ip')
+        try:
+            ip = requests.get('https://enabledns.com/ip')
+        except:
+            return None
         if str(ip.status_code) != '200':
             return ip.status_code
         return ip.content
@@ -47,7 +49,7 @@ class Domains():
         x = self.export_url
         data = requests.get(x, auth=(self.config['user']['username'], self.config['user']['password']))
         rr = data.status_code
-        if rr != '200':
+        if str(rr) != '200':
             return rr
         
         try:
@@ -63,7 +65,7 @@ class Domains():
         x = self.url +  '/' + str(dom) + '.json'
         data = requests.get(x, auth=(self.config['user']['username'], self.config['user']['password']))
         rr = data.status_code
-        if rr != '200':
+        if str(rr) != '200':
             return rr
         
         try:
@@ -86,7 +88,7 @@ class Domains():
         x = self.url + '/' + self.config['domain']['name'] + '.json'
         hdr = {'Content-type': 'application/json'}
         data = requests.post(x, auth=(self.config['user']['username'], self.config['user']['password']), headers=hdr, data=json.dumps(rec_data))
-        if data.status_code != '200':
+        if str(data.status_code) != '200':
             return data.status_code
         return True
 
@@ -100,7 +102,10 @@ class Domains():
             
 
     def update_ip(self, ip):
-        rec_info = self.get_record_info(ip)
+        try:
+            rec_info = self.get_record_info(ip)
+        except:
+            return '404'
         x = self.url + '/' + self.config['domain']['name'] + '.json'
         hdr = {'Content-type': 'application/json'}
         tmp = requests.put(x, auth=(self.config['user']['username'], self.config['user']['password']), data=json.dumps(rec_info), headers=hdr)
@@ -156,8 +161,21 @@ class Settings():
         except:
             ret = False
         return ret
-        
-        
+    
+    def auth_error(self):
+        cfg = self.get_config()
+        try:
+            ret = cfg['cache']['auth_err']
+            ret = True
+        except:
+            ret = False
+        return ret
+    
+    def needs_conf(self):
+        if self.has_domain() is False or self.is_configured() is False or self.auth_error() != False:
+            return True
+        return False
+    
     def create_configs(self):
         if os.path.isdir(self.settings_dir) is False:
             try:

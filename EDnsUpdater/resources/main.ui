@@ -32,8 +32,8 @@
    <string>EnableDNS updater</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="resources.qrc">
-    <normaloff>:/updater/icon.png</normaloff>:/updater/icon.png</iconset>
+   <iconset resource="resource.qrc">
+    <normaloff>:/updater/icon128px.png</normaloff>:/updater/icon128px.png</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true">#centralwidget {
@@ -210,7 +210,7 @@ color: white;
   </action>
  </widget>
  <resources>
-  <include location="resources.qrc"/>
+  <include location="resource.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -12,12 +12,6 @@ from domains import Ui_DomainList
 from about import Ui_About
 
 
-def sigint_handler(*args):
-    """Handler for the SIGINT signal."""
-    QtGui.QApplication.quit()
-
-
-
 class authThread(QtCore.QThread):
 
     def __init__(self, user, psw):
@@ -32,6 +26,7 @@ class authThread(QtCore.QThread):
         self.settings = updater.Settings()
         self.domains  = updater.Domains()
         ret = self.domains.do_login(self.u,self.p)
+        print ret
         if ret is True:
             if self.settings.has_domain():
                 del self.domains.config['domain']
@@ -74,6 +69,34 @@ class updateThread(QtCore.QThread):
         except:
             ret = False
         return ret
+    
+    def check_remote(self):
+        try:
+            rec_id = self.domains.config['domain']['id']
+            rec_name = self.domains.config['domain']['rec_name']
+        except:
+            return 404
+        
+        ret = self.domains.get_dom_records(self.domains.config['domain']['name'])
+        if str(ret) != '200':
+            return ret
+        
+        found = False
+        for i in ret:
+            if str(i['id']) == str(rec_id) and str(i['host']) == str(rec_name):
+                found = True
+                
+        if found == False:
+            del self.domains.config['domain']
+            self.domains.config.write()
+            return 404
+        return True
+        
+    def emit_event(self, rem):
+        self.count = 0
+        gc.collect()
+        self.emit(QtCore.SIGNAL("notifEvent"), rem)
+        time.sleep(1)
         
 
     def run(self):
@@ -83,10 +106,18 @@ class updateThread(QtCore.QThread):
             data = {'cache': {}}
             self.settings.save_cfg(data)
             self.reload_conf()
-
+            
+        if self.settings.auth_error() is True:
+            self.p.set_acct("Authentication Error")            
+            self.emit_event('401')
+            
         self.count = self.update_interval
         while 1:
-            if self.settings.is_configured() is False or self.settings.has_domain() is False:
+            if self.settings.needs_conf() is True:
+                if self.settings.has_domain() is False:
+                    self.p.set_record("UNCONFIGURED")
+                if self.settings.is_configured() is False:
+                    self.p.set_acct("UNCONFIGURED")
                 time.sleep(1)
                 gc.collect()
                 continue
@@ -98,7 +129,14 @@ class updateThread(QtCore.QThread):
                     self.count = 0
                     self.ip = "Unknown(No internet?)"
                     continue
+                    
                 self.ip = ip
+                
+                rem = self.check_remote()
+                if rem is not True:
+                    self.emit_event(rem)
+                    continue
+                
                 ret = False
                 if self.get_cache('ip') is False:
                     ret = self.domains.update_ip(str(ip))
@@ -106,13 +144,9 @@ class updateThread(QtCore.QThread):
                     if str(self.domains.config['cache']['ip']) != str(ip):
                         ret = self.domains.update_ip(str(ip))
                         
-                if ret is False:
-                    self.count = 0
-                    gc.collect()
-                    continue
-                    
                 if str(ret) != '200':
-                    self.emit(QtCore.SIGNAL("notifEvent"), ret)
+                    self.emit_event(ret)
+                    continue
                 else:
                     self.domains.config['cache']['ip'] = str(ip)
                     self.domains.config.write()
@@ -130,7 +164,7 @@ class updateThread(QtCore.QThread):
 
 
 class About(QtGui.QDialog):
-    def __init__(self, data, parent=None):
+    def __init__(self, parent=None):
         QtGui.QDialog.__init__(self, parent)
         self.p = parent
         self.ui = Ui_About()
@@ -194,7 +228,7 @@ class MyLogin(QtGui.QDialog):
     def set_status(self, text, color):
         self.ui.status.setText(str(text))
         self.ui.status.setStyleSheet("#status { color : %s; }" % str(color));
-        
+    
         
     def start_thread(self):
         self.ui.Buttons.button(self.ui.Buttons.Save).setEnabled(False)
@@ -212,7 +246,8 @@ class MyLogin(QtGui.QDialog):
         
         if self.p.settings.is_configured() is True:
             old_u = self.p.domains.config['user']['username']
-            if str(self.usr) != str(old_u):
+            old_p = self.p.domains.config['user']['password']
+            if str(self.usr) != str(old_u) or str(self.psw) != str(old_p):
                 self.start_thread()
             else:
                 self.close()
@@ -235,7 +270,8 @@ class MyLogin(QtGui.QDialog):
         else:
             self.ui.Buttons.button(self.ui.Buttons.Save).setEnabled(True)
             self.ui.Buttons.button(self.ui.Buttons.Cancel).setEnabled(True)
-            self.set_status("Incorect user/pass", "red")
+            txt = self.p.get_code_text(rsp)
+            self.set_status(str(txt), "red")
         self.emit(QtCore.SIGNAL("userChanged"))
 
 
@@ -253,12 +289,26 @@ class MainWin(QtGui.QMainWindow):
         self.settings = updater.Settings()
         self.domains  = updater.Domains()
         self.dom_data = []
+        self.codes =    {
+                            '401' : 'Incorrect user/pass, or no API access.',
+                            '404' : 'Could not find domain/record',
+                            '500' : 'A server error has occurred',
+                        }
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.create_sys_tray()
         self.check_configs()
         self.connect_ctrls()
         self.run_loop()
+    
+    
+    def get_code_text(self, code):
+        try:
+            txt = self.codes[str(code)]
+        except:
+            txt = "Unknown error occured. Please Try again later."
+        return txt
+        
     
     def stub(self):
         print 111
@@ -273,7 +323,7 @@ class MainWin(QtGui.QMainWindow):
         
        
     def about(self):
-        x = About(self)
+        x = About(parent=self)
         x.exec_()
                           
     def change_acct(self):
@@ -298,12 +348,23 @@ class MainWin(QtGui.QMainWindow):
         self.display_info()   
         return True
     
+    
     def refresh(self):
         self.domains = updater.Domains()
         if 'cache' in self.domains.config:
             del self.domains.config['cache']
             self.domains.config.write()
         self.emit(QtCore.SIGNAL("RefreshEvent"))
+        
+        
+    def get_cache(self):
+        try:
+            self.cache = self.domains.config['cache']
+        except:
+            self.domains.config['cache'] = {}
+            self.domains.config.write()
+            self.cache = {}
+        return self.cache
         
 
     def check_configs(self):
@@ -328,6 +389,17 @@ class MainWin(QtGui.QMainWindow):
             txt = txt + "\n                 " + str(msg2)
         self.ui.UpStat.setText("Status:     %s" % txt)
         
+    def set_record(self, msg1, msg2=None):
+        txt = msg1
+        if msg2 != None:
+            txt = txt + "\n                 " + str(msg2)
+        self.ui.DomInfo.setText("Record:   %s" % txt)
+     
+    def set_acct(self, msg1, msg2=None):
+        txt = msg1
+        if msg2 != None:
+            txt = txt + "\n                 " + str(msg2)
+        self.ui.AcctInfo.setText("Account: %s" % txt)
 
     def display_info(self):
         self.refresh_configs()
@@ -368,14 +440,21 @@ class MainWin(QtGui.QMainWindow):
                 self.setVisible(False)
             else:
                 self.setVisible(True)
-
+                
 
     def treatIPEvent(self, msg):
-        print msg
+        print "IP event: " + str(msg)
+
 
     def treatEvent(self, msg):
-        print msg
-
+        if str(msg) == '401':
+            cache = self.get_cache()
+            self.domains.config['cache']['auth_err'] = True
+            self.domains.config.write()
+            self.change_acct()
+        if str(msg) == '404':
+            self.change_dom()
+            
 
 
 def main():
