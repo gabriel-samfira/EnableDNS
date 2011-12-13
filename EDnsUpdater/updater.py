@@ -13,14 +13,14 @@ import time
 class Domains():
 
     def __init__(self):
-        self.url = 'http://alfa.enabledns.com/api/domains'
-        self.export_url = 'http://alfa.enabledns.com/api/export.json'
+        self.url = 'https://enabledns.com/api/domains'
+        self.export_url = 'https://enabledns.com/api/export.json'
         self.config = Settings().get_config()
 
 
     @classmethod
     def do_login(cls, username, password):
-        x = 'http://alfa.enabledns.com/api/domains.json'
+        x = 'https://enabledns.com/api/domains.json'
         data = requests.get(x, auth=(username, password))
         if str(data.status_code) != '200':
             return data.status_code

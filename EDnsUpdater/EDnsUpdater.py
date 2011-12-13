@@ -1,6 +1,7 @@
 #!/usr/bin/python -d
  
 import sys
+import os
 import updater
 import time
 import signal
@@ -11,6 +12,23 @@ from main import Ui_MainWindow
 from domains import Ui_DomainList
 from about import Ui_About
 
+try:
+    settings_dir = os.path.join(os.environ['APPDATA'], "com.enabledns.updater")
+except:
+    settings_dir = "/tmp/com.enabledns.updater"
+
+
+try:
+    if os.path.isdir(settings_dir) is False:
+        os.makedirs(settings_dir)
+    log_file = os.path.join(settings_dir, "updater.log")
+    log = open(log_file, "a", 0)
+    sys.stdout = log
+    sys.stderr = log
+except Exception as err:
+    print err
+    sys.exit()
+    
 
 class authThread(QtCore.QThread):
 
@@ -78,7 +96,7 @@ class updateThread(QtCore.QThread):
             return 404
         
         ret = self.domains.get_dom_records(self.domains.config['domain']['name'])
-        if str(ret) != '200':
+        if type(ret) != list:
             return ret
         
         found = False
@@ -235,7 +253,6 @@ class MyLogin(QtGui.QDialog):
         self.ui.Buttons.button(self.ui.Buttons.Cancel).setEnabled(False)
         self.loginT = authThread(self.usr, self.psw)
         self.set_status("Authenticatig...", "blue")
-            
         self.loginT.begin()
         self.connect(self.loginT, QtCore.SIGNAL("loginEvent"), self.h_rsp)
     
@@ -454,13 +471,19 @@ class MainWin(QtGui.QMainWindow):
             self.change_acct()
         if str(msg) == '404':
             self.change_dom()
+
+    def closeEvent(self, event):
+        if self.isVisible():
+            self.setVisible(False)
+        event.ignore()
             
 
 
 def main():
     app = QtGui.QApplication(sys.argv)
     myapp = MainWin()
-    myapp.show()
+    if len(sys.argv) > 1 and str(sys.argv[1]) == 'show':
+        myapp.show()
     sys.exit(app.exec_())
 
 
