@@ -82,6 +82,7 @@ class Ui_Login(object):
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Don\'t have an account? <a href=\"https://enabledns.com/accounts/register/\"><span style=\" text-decoration: underline; color:#8ab20a;\">Create a free account in less then a minute</span></a>. </p>\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Forgot your password? <a href=\"https://enabledns.com/accounts/password/reset/\"><span style=\" text-decoration: underline; color:#8ab20a;\">Click here!</span></a></p></body></html>", None, QtGui.QApplication.UnicodeUTF8))
         self.label_4.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_4.setOpenExternalLinks(True)
         self.label_4.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
         self.label_4.setObjectName(_fromUtf8("label_4"))
         self.gridLayout.addWidget(self.label_4, 6, 0, 1, 2)
