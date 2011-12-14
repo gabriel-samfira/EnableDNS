@@ -11,6 +11,8 @@ from login import Ui_Login
 from main import Ui_MainWindow
 from domains import Ui_DomainList
 from about import Ui_About
+from nodoms import Ui_NoDoms
+
 
 try:
     settings_dir = os.path.join(os.environ['APPDATA'], "com.enabledns.updater")
@@ -181,6 +183,23 @@ class updateThread(QtCore.QThread):
         self.start()
 
 
+
+class NoDoms(QtGui.QDialog):
+    def __init__(self, parent=None):
+        QtGui.QDialog.__init__(self, parent)
+        self.p = parent
+        self.ui = Ui_NoDoms()
+        self.ui.setupUi(self)
+        self.connect_ctrls()
+    
+    def connect_ctrls(self):
+        self.ui.ChangeAcct.clicked.connect(self.ch_acct)
+    
+    def ch_acct(self):
+        self.p.change_acct()
+        self.close()        
+
+
 class About(QtGui.QDialog):
     def __init__(self, parent=None):
         QtGui.QDialog.__init__(self, parent)
@@ -189,6 +208,7 @@ class About(QtGui.QDialog):
         self.ui.setupUi(self)
         self.ui.buttonBox.button(self.ui.buttonBox.Ok).clicked.connect(self.close)
         
+
 
 class myDomains(QtGui.QDialog):
     def __init__(self, data, parent=None):
@@ -352,8 +372,11 @@ class MainWin(QtGui.QMainWindow):
     def change_dom(self):
         self.domains = updater.Domains()
         self.dom_data = self.domains.get_domains()
-        x = myDomains(self.dom_data, parent=self)
-        self.connect(x, QtCore.SIGNAL("domChanged"), self.dom_callback)
+        if len(self.dom_data) > 0:
+            x = myDomains(self.dom_data, parent=self)
+            self.connect(x, QtCore.SIGNAL("domChanged"), self.dom_callback)
+        else:
+            x = NoDoms(parent=self)
         x.exec_()
         
     def acct_callback(self):
@@ -392,7 +415,10 @@ class MainWin(QtGui.QMainWindow):
         if self.settings.has_domain() is False:
             self.domains = updater.Domains()
             self.dom_data = self.domains.get_domains()
-            x = myDomains(self.dom_data, parent=self)
+            if len(self.dom_data) > 0:
+                x = myDomains(self.dom_data, parent=self)
+            else:
+                x = NoDoms(parent=self)
             x.exec_()
 
 
