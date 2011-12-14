@@ -46,7 +46,6 @@ class authThread(QtCore.QThread):
         self.settings = updater.Settings()
         self.domains  = updater.Domains()
         ret = self.domains.do_login(self.u,self.p)
-        print ret
         if ret is True:
             if self.settings.has_domain():
                 del self.domains.config['domain']
@@ -197,7 +196,20 @@ class NoDoms(QtGui.QDialog):
     
     def ch_acct(self):
         self.p.change_acct()
-        self.close()        
+        self.close()
+    
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            if self.p.settings.is_configured() is False:
+                sys.exit()
+            else:
+                self.close()
+    
+    def closeEvent(self, event):
+        if self.p.settings.is_configured() is False:
+            sys.exit()
+        else:
+            event.accept()
 
 
 class About(QtGui.QDialog):
@@ -207,6 +219,10 @@ class About(QtGui.QDialog):
         self.ui = Ui_About()
         self.ui.setupUi(self)
         self.ui.buttonBox.button(self.ui.buttonBox.Ok).clicked.connect(self.close)
+    
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
         
 
 
@@ -246,6 +262,18 @@ class myDomains(QtGui.QDialog):
             self.ui.Domains.topLevelItem(count).setText(2, QtGui.QApplication.translate("DomainList", str(i['id']), None, QtGui.QApplication.UnicodeUTF8))
             count = count + 1
 
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            if self.p.settings.has_domain() is False:
+                sys.exit()
+            else:
+                self.close()
+    
+    def closeEvent(self, event):
+        if self.p.settings.has_domain() is False:
+            sys.exit()
+        else:
+            event.accept()
 
 
 class MyLogin(QtGui.QDialog):
@@ -312,6 +340,14 @@ class MyLogin(QtGui.QDialog):
         self.emit(QtCore.SIGNAL("userChanged"))
 
 
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            if self.p.settings.is_configured() is False:
+                sys.exit()
+            else:
+                self.close()
+
+
     def closeEvent(self, event):
         if self.p.settings.is_configured() is False:
             sys.exit()
@@ -371,6 +407,11 @@ class MainWin(QtGui.QMainWindow):
     
     def change_dom(self):
         self.domains = updater.Domains()
+        try:
+            del self.domains.config['domain']
+            self.domains.config.write()
+        except:
+            pass
         self.dom_data = self.domains.get_domains()
         if len(self.dom_data) > 0:
             x = myDomains(self.dom_data, parent=self)
@@ -379,14 +420,15 @@ class MainWin(QtGui.QMainWindow):
             x = NoDoms(parent=self)
         x.exec_()
         
+        
     def acct_callback(self):
         self.check_configs()
         self.display_info()        
         
+        
     def dom_callback(self):
         self.check_configs()
         self.display_info()   
-        return True
     
     
     def refresh(self):
@@ -408,10 +450,10 @@ class MainWin(QtGui.QMainWindow):
         
 
     def check_configs(self):
+        self.refresh_configs()
         if self.settings.is_configured() is False:
             x = MyLogin(self)
             x.exec_()
-            
         if self.settings.has_domain() is False:
             self.domains = updater.Domains()
             self.dom_data = self.domains.get_domains()
