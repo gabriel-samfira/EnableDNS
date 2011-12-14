@@ -1,0 +1,39 @@
+This is a graphical dynamic DNS update client for EnableDNS. It should run in the same manner on Linux, Windows and Mac as long as you have all the dependencies in place.
+
+The setup.py file is for windows only, and will build a binary standalone package that you can run on any windows machine as long as you have Microsoft Visual C++. More on that later.
+
+Dependencies:
+
+- Python 2.7
+- PyQt4
+- python-ConfigObj
+- python-requests
+- py2exe (Windows only)
+
+Linux:
+
+Linux users can just download the entire repo and run EDnsUpdater.py. It will run as long as the dependencies above are met.
+
+Windows:
+
+For windows users I have made an installer that should work on any windows system. I have only tested it with Windows XP and Windows 7, but it should be fine on Vista as well.
+
+If you plan on building it, please note that you will likely have to distribute the Microsoft Visual C++ runtime libraries along with it. Take extra care to include the same version that comes with the python 2.7 installation.
+
+The files you will need are:
+
+- msvcm90.dll
+- msvcp90.dll
+- msvcr90.dll
+
+You will also have to create a manifest file (Microsoft.VC90.CRT.manifest). All these files will have to be copied in the same folder as the compiled app.
+
+To build the self contained app open a cmd terminal and:
+
+python.exe setup.py py2exe
+
+A folder "dist" will be created in the same directory. Thats where you have to copy the dll's mentioned above.
+
+Mac OSX:
+
+Sorry, I do not have access to a Mac at the moment. In theory you can build a package similar to the windows package using py2app.
